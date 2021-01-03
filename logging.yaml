@@ -1,0 +1,59 @@
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: Logging
+metadata:
+  name: logging-basic
+  namespace: logging
+spec:
+  fluentd:
+    metrics:
+      serviceMonitor: true
+  fluentbit:
+    metrics:
+      serviceMonitor: true
+  controlNamespace: logging
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: ClusterOutput
+metadata:
+  name: es
+  namespace: logging
+spec:
+  elasticsearch:
+    host: basic-es-es-http
+    port: 9200
+    scheme: https
+    logstash_format: true
+    logstash_prefix: logs
+    ssl_verify: false
+    ssl_version: TLSv1_2
+    user: elastic
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: basic-es-es-elastic-user
+          key: elastic
+    buffer:
+      timekey: 1m
+      timekey_wait: 10s
+      timekey_use_utc: true
+      flush_thread_count: 8
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: ClusterFlow
+metadata:
+  name: es-flow
+  namespace: logging
+spec:
+  match:
+    - select:
+        namespaces:
+          - default
+          - logging
+          - metrics
+  filters:
+    - tag_normaliser:
+        format: "${namespace_name}.${pod_name}.${container_name}"
+  globalOutputRefs:
+    - es
+  outputRefs:
+    - es

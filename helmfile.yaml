@@ -1,0 +1,48 @@
+repositories:
+- name: prometheus
+  url: https://prometheus-community.github.io/helm-charts
+- name: nvidia
+  url: https://nvidia.github.io/k8s-device-plugin
+- name: autoscaler
+  url: https://kubernetes.github.io/autoscaler
+- name: banzaicloud
+  url: https://kubernetes-charts.banzaicloud.com
+- name: elastic
+  url: https://helm.elastic.co
+
+commonLabels:
+  lab: observability
+
+releases:
+  - name: prometheus-operator
+    chart: prometheus/kube-prometheus-stack
+    namespace: metrics
+    version: 12.9.2
+  - name: dcgm-exporter
+    chart: nvidia/nvidia-device-plugin
+    namespace: metrics
+    version: 0.7.3
+    values:
+      - nodeSelector:
+          worker: gpu
+        serviceMonitor:
+          additionalLabels:
+            "prometheus.io/prom-stack": "ok"
+  - name: cluster-autoscaler
+    chart: autoscaler/cluster-autoscaler
+    namespace: ops
+    version: 9.3.1
+    values:
+      - autoDiscovery:
+          clusterName: test
+        awsRegion: us-east-2
+  - name: logging-operator
+    chart: banzaicloud/logging-operator
+    namespace: logging
+    version: 3.8.3
+    values:
+      - createCustomResource: false
+  - name: es-operator
+    chart: elastic/eck-operator
+    namespace: logging
+    version: 1.3.1
